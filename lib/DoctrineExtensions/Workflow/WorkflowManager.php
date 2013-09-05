@@ -64,7 +64,7 @@ class WorkflowManager implements IWorkflowManager
 
     /**
      * @param \ezcWorkflow $workflow
-     * @return DoctrineExceution
+     * @return DoctrineExecution
      */
     public function createExecution(\ezcWorkflow $workflow)
     {
