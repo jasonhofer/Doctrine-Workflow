@@ -84,7 +84,7 @@ class WorkflowManager implements IWorkflowManager
 
     /**
      * Poll across the complete execution table to find suspended workflows ready for execution.
-     * 
+     *
      * @param int $limit
      * @param int $offset
      * @return array
@@ -137,5 +137,21 @@ class WorkflowManager implements IWorkflowManager
     public function save(\ezcWorkflow $workflow)
     {
         $this->definitionStorage->save($workflow);
+    }
+
+    /**
+     * @return WorkflowOptions
+     */
+    public function getWorkflowOptions()
+    {
+        return $this->options;
+    }
+
+    /**
+     * @return WorkflowFactory
+     */
+    public function getWorkflowFactory()
+    {
+        return $this->options->getWorkflowFactory();
     }
 }

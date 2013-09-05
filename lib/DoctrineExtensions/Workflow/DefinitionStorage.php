@@ -29,7 +29,7 @@ class DefinitionStorage implements \ezcWorkflowDefinitionStorage
 
     /**
      * Map of nodes to their database id for later saving of non-breaking new workflows.
-     * 
+     *
      * @var array
      */
     private $nodeMap = array();
@@ -115,7 +115,7 @@ class DefinitionStorage implements \ezcWorkflowDefinitionStorage
 
         if (count($result) == 1) {
             $result[0] = array_change_key_case($result[0], \CASE_LOWER);
-            
+
             $workflowName = $result[0]['workflow_name'];
             $workflowVersion = $result[0]['workflow_version'];
         } else {
@@ -142,7 +142,7 @@ class DefinitionStorage implements \ezcWorkflowDefinitionStorage
         $stmt->execute();
 
         $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        
+
         $this->workflowNodeIds[$workflowId] = array();
 
         // Create node objects.
@@ -233,6 +233,38 @@ class DefinitionStorage implements \ezcWorkflowDefinitionStorage
     }
 
     /**
+     * What mode of saving should it be? Update or Re-Generate?
+     *
+     * Conditions that an update sufficies:
+     * 1. No node has been deleted
+     * 2. No node has changed its meaning (action class or type)
+     * 3. For simplicitly only zero or one new nodes will be created.
+     *
+     * @param  \ezcWorkflow $workflow
+     * @return bool
+     */
+    private function canBeUpdated($workflow)
+    {
+        $hasExistingNodeIds = array();
+        $newNodes = 0;
+        foreach ( $workflow->nodes as $node ) {
+            $oid = spl_object_hash($node);
+            if (!isset($this->nodeMap[$oid])) {
+                $newNodes++;
+            } else {
+                $hasExistingNodeIds[] = $this->nodeMap[$oid];
+            }
+        }
+
+        if ($newNodes < 2 && $workflow->id) {
+            $similarCount = count(array_intersect($hasExistingNodeIds, $this->workflowNodeIds[$workflow->id]));
+            $previousCount = max(count($hasExistingNodeIds), count($this->workflowNodeIds[$workflow->id]));
+            return ($similarCount == $previousCount);
+        }
+        return false;
+    }
+
+    /**
      * Save a workflow definition to the database.
      *
      * @param  ezcWorkflow $workflow
@@ -249,34 +281,13 @@ class DefinitionStorage implements \ezcWorkflowDefinitionStorage
 
         $platform = $this->conn->getDatabasePlatform();
 
-        // what mode of saving should it be? Update or Re-Generate?
-        //
-        // Conditions that an update sufficies:
-        // 1. No node has been deleted
-        // 2. No node has changed its meaning (action class or type)
-        // 3. For simplicitly only zero or one new nodes will be created.
-
-        $hasExistingNodeIds = array();
-        $newNodes = 0;
-        foreach ( $workflow->nodes as $node ) {
-            $oid = spl_object_hash($node);
-            if (!isset($this->nodeMap[$oid])) {
-                $newNodes++;
-            } else {
-                $hasExistingNodeIds[] = $this->nodeMap[$oid];
-            }
-        }
-
-        $canBeUpdate = false;
-        if ($newNodes < 2 && count(array_diff($hasExistingNodeIds, $this->workflowNodeIds[$workflow->id])) == 0 && $workflow->id) {
-            $canBeUpdate = true;
-        }
+        $canBeUpdate = $this->canBeUpdated($workflow);
 
         $this->workflowNodeIds[$workflow->id] = array();
 
         try {
             $this->conn->beginTransaction();
-            
+
             $workflowVersion = $this->getCurrentVersion($workflow->name) + 1;
 
             $this->conn->update(
@@ -294,7 +305,7 @@ class DefinitionStorage implements \ezcWorkflowDefinitionStorage
                     ), array('workflow_id' => $workflow->id)
                 );
             } else {
-                $data = array(  
+                $data = array(
                     'workflow_name' => $workflow->name,
                     'workflow_version' => $workflowVersion,
                     'workflow_created' => $date->format($platform->getDateTimeFormatString()),
@@ -340,7 +351,7 @@ class DefinitionStorage implements \ezcWorkflowDefinitionStorage
                     if ( $platform->prefersSequences( ) ) {
                         $nodeId = (int) $this->conn->fetchColumn($platform->getSequenceNextValSQL($this->options->nodeSequence()));
                         $data['node_id'] = $nodeId;
-                    } 
+                    }
 
                     $this->conn->insert($this->options->nodeTable(), $data);
 
@@ -382,7 +393,7 @@ class DefinitionStorage implements \ezcWorkflowDefinitionStorage
                         }
                     }
 
-                    $data = array( 
+                    $data = array(
                         'incoming_node_id' => $incomingNodeId,
                         'outgoing_node_id' => $outgoingNodeId,
                     );
@@ -390,7 +401,7 @@ class DefinitionStorage implements \ezcWorkflowDefinitionStorage
                     if ( $platform->prefersSequences( ) ) {
                         $id = (int) $this->conn->fetchColumn($platform->getSequenceNextValSQL($this->options->nodeConnectionSequence()));
                         $data['id'] = $id;
-                    } 
+                    }
 
                     $this->conn->insert($this->options->nodeConnectionTable(), $data );
 
@@ -422,7 +433,7 @@ class DefinitionStorage implements \ezcWorkflowDefinitionStorage
         $platform = $this->conn->getDatabasePlatform();
 
         $sql = "SELECT workflow_version AS version FROM " . $this->options->workflowTable() . " ".
-               "WHERE workflow_name = ? " . 
+               "WHERE workflow_name = ? " .
                " AND workflow_version = ( SELECT MAX(workflow_version) FROM " . $this->options->workflowTable( ) . " WHERE workflow_name = ? )" .
                $platform->getForUpdateSQL();
         $stmt = $this->conn->prepare($sql);
@@ -431,7 +442,7 @@ class DefinitionStorage implements \ezcWorkflowDefinitionStorage
         $stmt->execute();
 
         $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        
+
         if ( $result !== false && isset( $result[0]['version'] ) && $result[0]['version'] !== null ) {
             $result[0] = array_change_key_case($result[0], \CASE_LOWER);
             return $result[0]['version'];

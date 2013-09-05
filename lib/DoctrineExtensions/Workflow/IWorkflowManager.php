@@ -84,4 +84,14 @@ interface IWorkflowManager
      * @return array
      */
     public function getUnusedWorkflowIds();
+
+    /**
+     * @return WorkflowOptions
+     */
+    public function getWorkflowOptions();
+
+    /**
+     * @return WorkflowFactory
+     */
+    public function getWorkflowFactory();
 }
