@@ -32,7 +32,7 @@ class WorkflowFactory
 
     public function __construct($entityManager = null)
     {
-        $this->em = $entityManager;
+        $this->entityManager = $entityManager;
     }
 
     /**
