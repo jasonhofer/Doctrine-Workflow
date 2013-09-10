@@ -20,6 +20,11 @@
 
 namespace DoctrineExtensions\Workflow;
 
+use DoctrineExtensions\Workflow\Exception\WorkflowFactoryException;
+use Doctrine\ORM\EntityManager;
+use ezcWorkflowVariableHandler;
+use ezcWorkflowNode;
+
 /**
  * Factory that creates the node, variable handler and service objects instances required by a specific workflow.
  *
@@ -38,7 +43,7 @@ class WorkflowFactory
     /**
      * @param  string $className
      * @param  array $configuration
-     * @return \ezcWorkflowNode
+     * @return ezcWorkflowNode
      */
     public function createNode($className, $configuration)
     {
@@ -47,13 +52,15 @@ class WorkflowFactory
 
     /**
      * @param  string $className
-     * @return \ezcWorkflowVariableHandler
+     * @return ezcWorkflowVariableHandler
      */
     public function createVariableHandler($className)
     {
-        if ($className == "DoctrineExtensions\Workflow\VariableHandler\EntityManagerHandler") {
-            if (!($this->entityManager instanceof \Doctrine\ORM\EntityManager)) {
-                throw new \ezcWorkflowException("EntityManagerHandler requires an EntityManager to be passed to the WorkflowFactory.");
+        if ($className == 'DoctrineExtensions\\Workflow\\VariableHandler\\EntityManagerHandler') {
+            if (!($this->entityManager instanceof EntityManager)) {
+                throw new WorkflowFactoryException(
+                    'EntityManagerHandler requires an EntityManager to be passed to the WorkflowFactory.'
+                );
             }
 
             return new $className($this->entityManager);

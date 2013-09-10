@@ -118,8 +118,9 @@ class WorkflowManager implements IWorkflowManager
     public function getUnusedWorkflowIds()
     {
         $sql = 'SELECT w.workflow_id FROM ' . $this->options->workflowTable() . ' w ' .
-               'WHERE w.workflow_id NOT IN ( SELECT DISTINCT e.workflow_id FROM ' . $this->options->executionTable() . ' e ) ' .
-               ' AND w.workflow_outdated = 1';
+               'WHERE w.workflow_id NOT IN (' .
+                    'SELECT DISTINCT e.workflow_id FROM ' . $this->options->executionTable() . ' e' .
+               ') AND w.workflow_outdated = 1';
         $stmt = $this->conn->query($sql);
 
         $workflowIds = array();
